@@ -1,0 +1,7 @@
+"0",""
+"0","layout_matrix <- rbind(c(1, 2),"
+"0",""
+"0","                       c(3, 4))"
+"0",""
+"0","gridExtra::grid.arrange(grobs = list_plots, layout_matrix = layout_matrix, ncol = 2, top = ""Distribution of test scores per education level"")"
+"0",""

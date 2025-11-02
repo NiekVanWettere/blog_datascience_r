@@ -1,0 +1,37 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Blog about data science in R",
+    "section": "",
+    "text": "Histogram with median and interquartile range\n\n\n\nvisualization\n\n\n\n\n\n\n\n\n\nNov 2, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\nNo matching items"
+  },
+  {
+    "objectID": "posts/post-with-code/index.html",
+    "href": "posts/post-with-code/index.html",
+    "title": "Post With Code",
+    "section": "",
+    "text": "This is a post with executable code.\n\n1 + 1\n\n[1] 2"
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "About this blog"
+  },
+  {
+    "objectID": "posts/welcome/index.html",
+    "href": "posts/welcome/index.html",
+    "title": "Welcome To My Blog",
+    "section": "",
+    "text": "This is the first post in a Quarto blog. Welcome!\n\nSince this post doesn’t specify an explicit image, the first image in the post will be used in the listing page of posts."
+  },
+  {
+    "objectID": "posts/histogram/index.html",
+    "href": "posts/histogram/index.html",
+    "title": "Histogram with median and interquartile range",
+    "section": "",
+    "text": "library('tidyverse', quietly = T)\n\n\nDummy data is generated: test scores for four different ‘education levels’.\n\nset.seed(123)\n\nn &lt;- 1000\nn_outliers &lt;- 20  # number of outliers\n\n# Generate test scores mostly around 50 with sd 15\ntest_scores &lt;- rnorm(n, mean = 50, sd = 15)\n\n# Clip values between 0 and 100\ntest_scores &lt;- pmin(pmax(test_scores, 0), 100)\n\n# Add some extreme outliers\noutlier_indices &lt;- sample(1:n, n_outliers)\ntest_scores[outlier_indices] &lt;- sample(c(runif(n_outliers/2, 90, 100),  # high outliers\n                                         runif(n_outliers/2, 0, 10)))   # low outliers\n\n# Create education levels\neducation_levels &lt;- sample(c(\"Level 1\", \"Level 2\", \"Level 3\", \"Level 4\"), n, replace = TRUE)\n\n# Combine into a dataframe\ndataframe_with_test_scores &lt;- data.frame(\n  test_scores = test_scores,\n  education_levels = education_levels\n)\n\n\nWe calculate the boxplot-values to plot along the histogram.\n\nsummary_data_IQR &lt;- dataframe_with_test_scores |&gt;\n\n  group_by(education_levels) |&gt;\n\n  summarise(\n\n    number_of_students = n(),\n\n    median_test_score = median(test_scores),\n\n    IQR_lower = quantile(test_scores, 0.25),\n\n    IQR_upper = quantile(test_scores, 0.75), .groups = 'drop') |&gt;\n\n  mutate(IQR_range = (IQR_upper - IQR_lower) |&gt; round(2),\n\n         outlier_threshold_1 = IQR_upper + (IQR_range * 1.5),\n         outlier_threshold_2 = IQR_lower - (IQR_range * 1.5))\n\n\nThat information is joined with the original dataframe containing the test scores.\n\ntest_scores_per_education_level_list &lt;- dataframe_with_test_scores |&gt;\n\n  left_join(summary_data_IQR, by = join_by(education_levels))  |&gt;\n\n  group_split(education_levels) # Split in list of dataframes.\n\n\nWe plot the histograms.\n\nlist_plots &lt;- vector(mode = \"list\", length = length(test_scores_per_education_level_list))\n\nfor (i in seq_along(test_scores_per_education_level_list))  { \n\n  # flexible bin-width\n  max_value &lt;- max(test_scores_per_education_level_list[[i]]$test_scores, na.rm = TRUE)\n  binwidth &lt;- max_value / 40 \n\n  # IQR-range\n  IQR_upper_x_coord &lt;- test_scores_per_education_level_list[[i]]$IQR_upper[1]\n  IQR_range_label &lt;- paste0('iqr: ', test_scores_per_education_level_list[[i]]$IQR_range[1], '%')\n\n  # plot histogram\nplot_result &lt;- test_scores_per_education_level_list[[i]] |&gt;\n  mutate(color = ifelse(test_scores &gt; outlier_threshold_1 | test_scores &lt; outlier_threshold_2, \"darkred\", \"grey\")) |&gt;\n\n \n  ggplot(aes(x = test_scores, fill = color)) +\n\n  facet_grid(cols = vars(education_levels), scales = 'fixed') +\n\n  scale_x_continuous(breaks = scales::pretty_breaks(), labels = scales::percent_format(scale = 1), expand = expansion(mult = c(0, 0.05))) +\n\n  scale_y_continuous(breaks = scales::pretty_breaks(), labels = scales::number_format(accuracy = 1)) +\n\n  geom_histogram(binwidth = binwidth) +\n\n  scale_fill_identity() +\n\ngeom_segment(aes(x = median_test_score, xend = median_test_score, y = 0, yend = Inf), color = \"darkgreen\", linewidth = 0.5, linetype = \"dashed\") +\n\n  geom_segment(aes(x = IQR_lower, xend = IQR_lower, y = 0, yend = Inf), color = \"blue\", linewidth = 0.5, linetype = \"dashed\") +\n\n  geom_segment(aes(x = IQR_upper, xend = IQR_upper, y = 0, yend = Inf), color = \"blue\", linewidth = 0.5, linetype = \"dashed\")  +\n\n  labs(x = \"test scores\", y = \"number of students\") +\n\n  theme_bw() +\n\n  theme(axis.title.x = element_text(size = 10),  # Adjust x-axis title size\n\n        axis.title.y = element_text(size = 10))   # Adjust y-axis title size\n\n\nmax_count_bin &lt;- max(ggplot_build(plot_result)$data[[1]]$count)\n\n# add text annotation for iqr-range\n\nplot_result_with_annotation &lt;- plot_result +\n\n  annotate(\"text\", x = IQR_upper_x_coord + (0.04 * max_value), y = 0.9 * max_count_bin, label = IQR_range_label, vjust = 1, hjust = 0, color = \"blue\", size = 3)\n\nlist_plots[[i]] &lt;- plot_result_with_annotation\n\n}\n\n\n\nlayout_matrix &lt;- rbind(c(1, 2),\n\n                       c(3, 4))\n\ngridExtra::grid.arrange(grobs = list_plots, layout_matrix = layout_matrix, ncol = 2, top = \"Distribution of test scores per education level\")"
+  }
+]
