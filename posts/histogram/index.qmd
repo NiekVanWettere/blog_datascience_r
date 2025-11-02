@@ -69,11 +69,8 @@ summary_data_IQR <- dataframe_with_test_scores |>
   summarise(
 
     number_of_students = n(),
-
     median_test_score = median(test_scores),
-
     IQR_lower = quantile(test_scores, 0.25),
-
     IQR_upper = quantile(test_scores, 0.75), .groups = 'drop') |>
 
   mutate(IQR_range = (IQR_upper - IQR_lower) |> round(2),
@@ -92,9 +89,7 @@ That information is joined with the original dataframe containing the test score
 ```{r}
 
 test_scores_per_education_level_list <- dataframe_with_test_scores |>
-
   left_join(summary_data_IQR, by = join_by(education_levels))  |>
-
   group_split(education_levels) # Split in list of dataframes.
 
 ```
@@ -154,7 +149,6 @@ geom_segment(aes(x = median_test_score, xend = median_test_score, y = 0, yend = 
 max_count_bin <- max(ggplot_build(plot_result)$data[[1]]$count)
 
 # add text annotation for iqr-range
-
 plot_result_with_annotation <- plot_result +
 
   annotate("text", x = IQR_upper_x_coord + (0.04 * max_value), y = 0.9 * max_count_bin, label = IQR_range_label, vjust = 1, hjust = 0, color = "blue", size = 3)
