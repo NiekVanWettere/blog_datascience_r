@@ -3,6 +3,7 @@ title: "Histogram with median, interquartile range and outlier highlighting"
 author: "Niek Van Wettere"
 date: "2025-11-02"
 categories: [visualization]
+image: siguniang_mountain.jpg
 format: 
   html:
     self-contained: true
@@ -14,7 +15,7 @@ editor: source
 ---
 
 
-In this blog post, we explore how a histogram-graph can be enriched with information about median, interquartile range and outlier highlighting.
+In this blog post, we explore how a histogram plot can be enriched with information about median, interquartile range and outlier highlighting.
 
 First, we load the tidyverse package.
 
@@ -104,6 +105,10 @@ test_scores_per_education_level_list <- dataframe_with_test_scores |>
 
 We create the histogram plots.
 
+- The median value is shown as a green vertical line.
+- The interquartile range is situated between the blue vertical lines.
+- Outlier values are colored in red.
+
 ```{r}
 
 list_plots <- vector(mode = "list", length = length(test_scores_per_education_level_list))
@@ -171,7 +176,7 @@ list_plots[[i]] <- plot_result_with_annotation
 
 <br />
 
-One plot is exemplified below.
+Now we visualize one plot from the list of plots that was created.
 
 ```{r}
 

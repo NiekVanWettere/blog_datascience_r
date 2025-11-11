@@ -6,7 +6,7 @@ website:
   description: "Personal website of Niek Van Wettere — linguist and data scientist."
   navbar:
     left:
-      - text: "Niek Van Wettere"   
+      - text: "Home"   
         href: index.qmd
     right:
       - text: "About"
