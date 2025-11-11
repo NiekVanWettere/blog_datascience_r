@@ -1,9 +1,8 @@
 ---
-title: "Histogram with median and interquartile range"
+title: "Histogram with median, interquartile range and outlier highlighting"
 author: "Niek Van Wettere"
 date: "2025-11-02"
 categories: [visualization]
-image: "image.jpg"
 format: 
   html:
     self-contained: true
@@ -13,6 +12,11 @@ format:
     df-print: paged
 editor: source
 ---
+
+
+In this blog post, we explore how a histogram-graph can be enriched with information about median, interquartile range and outlier highlighting.
+
+First, we load the tidyverse package.
 
 ```{r, message = F}
 
@@ -58,7 +62,7 @@ dataframe_with_test_scores <- data.frame(
 <br />
 
 
-We calculate the boxplot-values to plot along the histogram.
+We calculate median and IQR-limits to plot along the histogram.
 
 ```{r}
 
@@ -98,7 +102,7 @@ test_scores_per_education_level_list <- dataframe_with_test_scores |>
 
 <br />
 
-We plot the histograms.
+We create the histogram plots.
 
 ```{r}
 
@@ -110,7 +114,9 @@ for (i in seq_along(test_scores_per_education_level_list))  {
   max_value <- max(test_scores_per_education_level_list[[i]]$test_scores, na.rm = TRUE)
   binwidth <- max_value / 40 
 
-  # IQR-range
+  # median IQR-range
+  median_coord <- test_scores_per_education_level_list[[i]]$median_test_score[1]
+  median_label <- paste0(test_scores_per_education_level_list[[i]]$median_test_score[1] |> round(2), '%')
   IQR_upper_x_coord <- test_scores_per_education_level_list[[i]]$IQR_upper[1]
   IQR_range_label <- paste0('iqr: ', test_scores_per_education_level_list[[i]]$IQR_range[1], '%')
 
@@ -148,10 +154,13 @@ geom_segment(aes(x = median_test_score, xend = median_test_score, y = 0, yend = 
 
 max_count_bin <- max(ggplot_build(plot_result)$data[[1]]$count)
 
-# add text annotation for iqr-range
+# add text annotation for median and iqr-range
 plot_result_with_annotation <- plot_result +
 
-  annotate("text", x = IQR_upper_x_coord + (0.04 * max_value), y = 0.9 * max_count_bin, label = IQR_range_label, vjust = 1, hjust = 0, color = "blue", size = 3)
+  annotate("text", x = IQR_upper_x_coord + (0.04 * max_value), y = 0.9 * max_count_bin, label = IQR_range_label, vjust = 1, hjust = 0, color = "blue", size = 3) +
+
+annotate("text", x = median_coord, y = 0, label = median_label, vjust = 1.5, color = "darkgreen", size = 3) + expand_limits(y = - (max_count_bin * 0.1))
+
 
 list_plots[[i]] <- plot_result_with_annotation
 
@@ -162,6 +171,18 @@ list_plots[[i]] <- plot_result_with_annotation
 
 <br />
 
+One plot is exemplified below.
+
+```{r}
+
+list_plots[[1]]
+
+```
+
+
+<br />
+
+The different graphs can also be combined in one panel.
 
 ```{r}
 
@@ -172,3 +193,12 @@ layout_matrix <- rbind(c(1, 2),
 gridExtra::grid.arrange(grobs = list_plots, layout_matrix = layout_matrix, ncol = 2, top = "Distribution of test scores per education level")
 
 ```
+
+
+
+
+
+
+
+
+
