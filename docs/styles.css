@@ -71,6 +71,11 @@ a:hover {
   opacity: 0.9;
 }
 
+/* When the mobile menu expands, force a solid background */
+.navbar-collapse.show {
+  background-color: #E8D094 !important; /* deep solid blue */
+}
+
 /* -------------------------------------------------
    Footer
 -------------------------------------------------- */
