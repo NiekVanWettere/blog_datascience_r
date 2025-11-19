@@ -1,0 +1,126 @@
+---
+title: "Aggregating overlapping time periods"
+author: "Niek Van Wettere"
+date: "2025-11-19"
+categories: [data wrangling]
+image: rivers_image.png
+format: 
+  html:
+    self-contained: true
+    toc: true
+    code-fold: false
+    code-overflow: wrap
+    df-print: paged
+editor: source
+---
+
+This blog post shows a method to aggregate overlapping time periods in R. First, we generate dummy data that is structured as follows: for each event, several periods are defined with a start and end date. Some of these time periods overlap, while there are also gaps between periods that are not covered by the different periods for each event.
+
+```{r, message = F}
+
+library('tidyverse', quietly = T)
+
+df_with_periods <- tibble::tibble(
+  event = c(
+    rep("event1", 4),
+    rep("event2", 4),
+    rep("event3", 4)
+  ),
+  start_date = as.Date(c(
+    "2025-01-01", "2025-01-04", "2025-01-12", "2025-01-18",   # event1
+    "2025-01-03", "2025-01-05", "2025-01-14", "2025-01-20",   # event2
+    "2025-01-02", "2025-01-07", "2025-01-15", "2025-01-22"    # event3
+  )),
+  end_date = as.Date(c(
+    "2025-01-06", "2025-01-05", "2025-01-16", "2025-01-22",   # event1
+    "2025-01-07", "2025-01-12", "2025-01-18", "2025-01-25",   # event2
+    "2025-01-05", "2025-01-11", "2025-01-20", "2025-01-27"    # event3
+  ))
+)
+
+df_with_periods
+
+```
+
+<br />
+
+The goal is now to merge overlapping periods into one longer period, while preserving the gaps between periods. To tackle this issue, we create several R functions.
+
+First, we define a function that, per event, orders the rows according to begin date and takes a rolling maximum of the end date. The start date of the next row is also added.
+
+```{r}
+
+calculate_rolling_max_end_date <- function(data) {  # Order rows according to begin date and take rolling maximum of end date.
+  data |>
+    select(event, start_date, end_date) |>
+    distinct() |>
+    group_by(event) |>
+    arrange(start_date) |>
+    mutate(
+      end_date = as.Date(cummax(as.numeric(end_date)), origin = "1970-01-01"),
+      next_start_date = lead(start_date)) |> 
+    ungroup()
+}
+
+df_with_periods_aggregated <- df_with_periods |> calculate_rolling_max_end_date() |> arrange(event)
+df_with_periods_aggregated
+
+```
+
+
+<br />
+
+Then, we search for the rows where there is a time gap between the end date and the 'next start date'. This allows us to establish the time gaps, together with the oldest start date and the most recent end date. Since there are no complications of overlaps during the time gaps, it's easier to first detect these gaps and reason from there to get the 'unified' time periods.
+
+```{r}
+
+identify_gaps <- function(data) {
+  gaps <- data |>   
+    filter(difftime(next_start_date, end_date, units = "days") > 1) |>  # find the rows with gaps
+    select(- start_date) |>
+    rename(start_date = next_start_date) |>
+    select(event, start_date, end_date)
+  
+  min_begin <- data |>
+    group_by(event) |>
+    summarise(start_date = min(start_date), .groups = 'drop') |>
+    mutate(end_date = NA)
+  
+  max_end <- data |>
+    group_by(event) |>
+    summarise(end_date = max(end_date), .groups = 'drop') |>
+    mutate(start_date = NA)
+  
+  gaps <- bind_rows(gaps, min_begin, max_end) 
+  
+  return(gaps)
+}
+
+df_with_periods_aggregated_2 <- df_with_periods_aggregated |> identify_gaps() |> arrange(event, start_date) |> select(event, end_date, start_date)
+df_with_periods_aggregated_2
+
+```
+
+<br />
+
+Finally, the aggregated intervals are calculated, based on the time gaps.
+
+```{r}
+
+calculate_aggregated_intervals <- function(data) {
+  data |>
+    group_by(event) |>
+    arrange(start_date) |>
+    mutate(end_date = lead(end_date)) |>
+    ungroup() |>
+    filter(! is.na(start_date))
+}
+
+df_with_periods_aggregated_3 <- df_with_periods_aggregated_2 |> calculate_aggregated_intervals() |> arrange(event)
+df_with_periods_aggregated_3
+
+```
+
+<br />
+
+

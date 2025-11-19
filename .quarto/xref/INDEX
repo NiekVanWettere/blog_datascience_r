@@ -13,5 +13,8 @@
   },
   "posts/histogram/index.qmd": {
     "index.html": "945303f2"
+  },
+  "posts/period_aggregation/index.qmd": {
+    "index.html": "7466ab11"
   }
 }
