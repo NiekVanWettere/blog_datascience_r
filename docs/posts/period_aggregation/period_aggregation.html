@@ -5262,7 +5262,7 @@ window.onload = function() {
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>identify_gaps <span class="ot">&lt;-</span> <span class="cf">function</span>(data) {</span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  gaps <span class="ot">&lt;-</span> data <span class="sc">|&gt;</span>   </span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">difftime</span>(next_start_date, end_date, <span class="at">units =</span> <span class="st">&quot;days&quot;</span>) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="sc">|&gt;</span>  <span class="co"># find the rows with gaps</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">difftime</span>(next_start_date, end_date, <span class="at">units =</span> <span class="st">&quot;days&quot;</span>) <span class="sc">&gt;</span> <span class="dv">1</span>) <span class="sc">|&gt;</span>  <span class="co"># Find the rows with gaps.</span></span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span> start_date) <span class="sc">|&gt;</span></span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">rename</span>(<span class="at">start_date =</span> next_start_date) <span class="sc">|&gt;</span></span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">select</span>(event, start_date, end_date)</span>
@@ -5282,8 +5282,8 @@ window.onload = function() {
 <span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(gaps)</span>
 <span id="cb3-21"><a href="#cb3-21" aria-hidden="true" tabindex="-1"></a>}</span>
 <span id="cb3-22"><a href="#cb3-22" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>df_with_periods_aggregated_2 <span class="ot">&lt;-</span> df_with_periods_aggregated <span class="sc">|&gt;</span> <span class="fu">identify_gaps</span>() <span class="sc">|&gt;</span> <span class="fu">arrange</span>(event, start_date) <span class="sc">|&gt;</span> <span class="fu">select</span>(event, end_date, start_date)</span>
-<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>df_with_periods_aggregated_2</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<span id="cb3-23"><a href="#cb3-23" aria-hidden="true" tabindex="-1"></a>df_with_periods_aggregated_2 <span class="ot">&lt;-</span> df_with_periods_aggregated <span class="sc">|&gt;</span> <span class="fu">identify_gaps</span>() <span class="sc">|&gt;</span> <span class="fu">arrange</span>(event, start_date) </span>
+<span id="cb3-24"><a href="#cb3-24" aria-hidden="true" tabindex="-1"></a>df_with_periods_aggregated_2 <span class="sc">|&gt;</span> <span class="fu">select</span>(event, end_date, start_date)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div data-pagedtable="false">
   <script data-pagedtable-source type="application/json">
@@ -5309,7 +5309,7 @@ window.onload = function() {
 <div class="cell-output-display">
 <div data-pagedtable="false">
   <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["event"],"name":[1],"type":["chr"],"align":["left"]},{"label":["end_date"],"name":[2],"type":["date"],"align":["right"]},{"label":["start_date"],"name":[3],"type":["date"],"align":["right"]}],"data":[{"1":"event1","2":"2025-01-06","3":"2025-01-01"},{"1":"event1","2":"2025-01-16","3":"2025-01-12"},{"1":"event1","2":"2025-01-22","3":"2025-01-18"},{"1":"event2","2":"2025-01-12","3":"2025-01-03"},{"1":"event2","2":"2025-01-18","3":"2025-01-14"},{"1":"event2","2":"2025-01-25","3":"2025-01-20"},{"1":"event3","2":"2025-01-05","3":"2025-01-02"},{"1":"event3","2":"2025-01-11","3":"2025-01-07"},{"1":"event3","2":"2025-01-20","3":"2025-01-15"},{"1":"event3","2":"2025-01-27","3":"2025-01-22"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["event"],"name":[1],"type":["chr"],"align":["left"]},{"label":["start_date"],"name":[2],"type":["date"],"align":["right"]},{"label":["end_date"],"name":[3],"type":["date"],"align":["right"]}],"data":[{"1":"event1","2":"2025-01-01","3":"2025-01-06"},{"1":"event1","2":"2025-01-12","3":"2025-01-16"},{"1":"event1","2":"2025-01-18","3":"2025-01-22"},{"1":"event2","2":"2025-01-03","3":"2025-01-12"},{"1":"event2","2":"2025-01-14","3":"2025-01-18"},{"1":"event2","2":"2025-01-20","3":"2025-01-25"},{"1":"event3","2":"2025-01-02","3":"2025-01-05"},{"1":"event3","2":"2025-01-07","3":"2025-01-11"},{"1":"event3","2":"2025-01-15","3":"2025-01-20"},{"1":"event3","2":"2025-01-22","3":"2025-01-27"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 </div>

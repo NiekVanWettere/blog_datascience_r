@@ -96,8 +96,8 @@ identify_gaps <- function(data) {
   return(gaps)
 }
 
-df_with_periods_aggregated_2 <- df_with_periods_aggregated |> identify_gaps() |> arrange(event, start_date) |> select(event, end_date, start_date)
-df_with_periods_aggregated_2
+df_with_periods_aggregated_2 <- df_with_periods_aggregated |> identify_gaps() |> arrange(event, start_date) 
+df_with_periods_aggregated_2 |> select(event, end_date, start_date)
 
 ```
 
