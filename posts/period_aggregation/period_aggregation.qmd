@@ -76,7 +76,7 @@ Then, we search for the rows where there is a time gap between the end date and 
 
 identify_gaps <- function(data) {
   gaps <- data |>   
-    filter(difftime(next_start_date, end_date, units = "days") > 1) |>  # find the rows with gaps
+    filter(difftime(next_start_date, end_date, units = "days") > 1) |>  # Find the rows with gaps.
     select(- start_date) |>
     rename(start_date = next_start_date) |>
     select(event, start_date, end_date)

@@ -11,8 +11,6 @@ _render/
 _cache/
 *.utf8.md
 *.knit.md
-*.html
-*.pdf
 
 # renv cache (packages are restored automatically)
 renv/library/
