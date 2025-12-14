@@ -14,4 +14,4 @@ about:
       href: https://orcid.org/0000-0002-9455-368X
 ---
 
-About this blog
+Niek Van Wettere did a PhD in corpus linguistics at Ghent University (Belgium) before transitioning into data jobs outside academia. This blog showcases a series of data topics and how they can be tackled with R. 
