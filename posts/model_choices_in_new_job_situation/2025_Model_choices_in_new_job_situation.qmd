@@ -1,0 +1,360 @@
+---
+title: "Job choice simulation with r-shinylive"
+author: "Niek Van Wettere"
+date: "2025-12-14"
+categories: [app]
+image: job_simulation_image.jpg
+filters:
+  - shinylive
+format:
+  html:
+    theme:
+      - cosmo
+      - brand
+    css: styles.css
+    self-contained: false
+    embed-resources: false
+    resources: 
+      - shinylive-sw.js
+execute: 
+  freeze: false
+---
+
+# Introduction
+
+This blog post explores the use of r-shinylive to deploy an app about job choice simulation. Thanks to r-shinylive, the app can run autonomously in the browser of the end user, without a server.
+
+In this app, we simulate job choice for four groups of employees, each with a different group size. There are four choice possibilities to accommodate for the new situation:
+
+- 'remain in old job position': we assume that a certain number of people have to remain in their old job position. All these positions must be filled and there cannot remain more people in their old job position than available positions.
+- 'change to new job position in old field': we assume that only a limited new job positions in the old field are available. Not all positions have to be filled by the existing workforce.
+- 'change to new job position in new field': we assume that there is no limitation for these positions.
+- 'quit job': the employee leaves the organization.
+
+For each group of employees, probabilities can be associated with the different choices. These probabilities have to sum up to 1.
+
+The app generates a table that estimates how many people will choose a certain outcome, based on multiple runs of the algorithm (cf. bootstrap reps). The algorithm encompasses different steps beyond the initial sampling of choice outcome: (1) ensure that all positions in the old job are covered and (2) ensure that, if a certain option is taken by too many people, these people are re-assigned to a new choice. These 'second' choices are reported in the diagnostics section.  
+
+# App interface
+
+
+```{shinylive-r}
+#| standalone: true
+#| viewerHeight: 750
+#| freeze: false
+
+library(shiny)
+library(dplyr)
+library(tidyr)
+
+# ============================================================
+# Helper functions
+# ============================================================
+
+# Function to assign people to other group, in order to fill must-filled positions--------------------------------------------
+assign_to_other_group <- function(df,
+                                  target_choice,
+                                  required_n) {
+
+  # How many already assigned?
+  current_n <- sum(df$choice == target_choice)
+  need <- required_n - current_n
+
+  # If there are no extra people needed to fill positions, there is nothing to do.
+  if (need <= 0) {
+    return(list(
+      df = df,
+      moved = 0,
+      shortage = 0
+    ))
+  }
+
+  # Pool of candidates NOT currently in the target group
+  pool <- df |> dplyr::filter(choice != target_choice)
+
+  collected <- list()  # Empty list to collect people who were re-assigned.
+  iter <- 1
+  max_iter <- 100
+  
+  prob_cols <- c(
+    "choice_change_to_new_job_position_in_old_field",
+    "choice_change_to_new_job_position_in_new_field",
+    "choice_remain_in_old_job_position",
+    "choice_quit_job"
+  )
+  
+  # WHILE LOOP: iterative probability-based sampling
+  while (
+    iter <= max_iter &&  # We limit the while-loop to a maximum number of iterations.
+    length(dplyr::bind_rows(collected)$person_id %||% character()) < need &&  # If the number of needed people is attained, the while-loop can stop.
+    nrow(pool) > 0   # If the pool is empty, the while-loop is stopped.
+  ) {
+
+    iter <- iter + 1
+
+    # Reassign choices using probabilities
+    pool <- pool |>
+      rowwise() |>
+      dplyr::mutate(choice = sample(prob_cols, 1, replace = F, prob=c_across(all_of(prob_cols)))) |> 
+      ungroup()
+
+    # Individuals reassigned to target_choice in this iteration
+    moved_this_round <- pool |> dplyr::filter(choice == target_choice)
+
+    if (nrow(moved_this_round) > 0)
+      collected[[length(collected) + 1]] <- moved_this_round  # Reassigned people are added to the collected-list.
+
+    # Remaining pool loses those moved this round.
+    pool <- pool |> dplyr::filter(choice != target_choice)
+  }
+
+  # Bind all collected people
+  moved_people <- dplyr::bind_rows(collected)
+
+  moved_n <- nrow(moved_people)
+  shortage <- max(0, need - moved_n)
+
+  # Build final dataset
+  output <- df |>
+    # keep original target_choice people
+    dplyr::filter(choice == target_choice) |>
+    # add people who stayed with non-target choices
+    dplyr::union_all(pool) |>
+    # add collected reassigned people
+    dplyr::union_all(moved_people) |>
+    dplyr::ungroup()
+
+  list(
+    df = output,
+    moved = moved_n,
+    shortage = shortage
+  )
+}
+
+
+# If there are too many people for a given choice (lack of positions), the group is 'downsized' -------------------------------- 
+limit_group <- function(df, choice_name, threshold) {
+  df_in  <- df |> filter(choice == choice_name)
+  df_out <- df |> filter(choice != choice_name)
+  
+  reassigned_n <- 0
+  
+  if (nrow(df_in) > threshold) {
+    keep <- df_in |> slice_sample(n=threshold)  # We randomly sample the people who will stick to their first choice.
+    excess <- anti_join(df_in, keep, by="person_id")  # The 'excess'-part will sample a new choice.
+    reassigned_n <- nrow(excess)
+    
+    prob_cols <- grep("^choice_", names(df), value = TRUE)
+    excess[, choice_name] <- 0  # The current choice gets zero probability and can't be chosen anymore.
+    
+    excess <- excess |>
+      rowwise() |>
+      mutate(across(all_of(prob_cols), ~ .x / sum(c_across(all_of(prob_cols))))) |>  # Ensure that probabilities sum to 1 again.
+      mutate(choice = sample(prob_cols, 1, replace = F, prob = c_across(all_of(prob_cols)))) |>  # Sample new choice.
+      ungroup()
+    
+    df <- bind_rows(df_out, keep, excess)
+  }
+  
+  list(df=df, reassigned=reassigned_n)
+}
+
+# Run single simulation -----------------------------------------------------------------------------------------------------------
+run_single_sim <- function(df, new_positions, old_positions) {
+  prob_cols <- c(
+    "choice_change_to_new_job_position_in_old_field",
+    "choice_change_to_new_job_position_in_new_field",
+    "choice_remain_in_old_job_position",
+    "choice_quit_job"
+  )
+  
+  expanded <- df |>
+    uncount(weights = group_size) |>
+    mutate(person_id = row_number()) |>
+    rowwise() |>
+    mutate(choice = sample(prob_cols, 1, prob=c_across(all_of(prob_cols)))) |>  # Sample initial choice.
+    ungroup()
+  
+  # Following steps to adjust initial choices, in accordance with the available positions.
+  step1 <- assign_to_other_group(expanded, "choice_remain_in_old_job_position", old_positions)
+  expanded <- step1$df
+  
+  step2 <- limit_group(expanded, "choice_remain_in_old_job_position", old_positions)
+  expanded <- step2$df
+  
+  step3 <- limit_group(expanded, "choice_change_to_new_job_position_in_old_field", new_positions)
+  expanded <- step3$df
+  
+  list(
+    summary = expanded |>
+      group_by(choice) |>
+      summarize(n=n(), .groups="drop"),
+    step1=step1,
+    step2=step2,
+    step3=step3
+  )
+}
+
+
+# Run bootstrap -----------------------------------------------------------------------------------------------------------
+run_bootstrap <- function(df, new_positions, old_positions, B, progress) {
+  
+  results <- vector("list", B)
+  messages <- list(step1=0, step2=0, step3=0, shortage=0)
+  
+  for (i in 1:B) {
+    progress$set(value=i)
+    out <- run_single_sim(df, new_positions, old_positions)   # We run the simulation.
+    
+    results[[i]] <- out$summary
+    messages$step1    <- messages$step1 + out$step1$moved
+    messages$shortage <- messages$shortage + out$step1$shortage
+    messages$step2    <- messages$step2 + out$step2$reassigned
+    messages$step3    <- messages$step3 + out$step3$reassigned
+  }
+  
+  agg <- bind_rows(results, .id="run") |>
+    group_by(choice) |>
+    summarize(min=min(n), mean=round(mean(n),1), max=max(n), .groups="drop")  # Summary statistics are established over multiple runs.
+  
+  list(summary=agg, messages=messages)
+}
+
+
+
+# ============================================================
+# UI — spreadsheet built from numericInputs (ShinyLive compatible)
+# ============================================================
+
+make_prob_row <- function(id_prefix, row_label, values) {
+  fluidRow(
+    column(2, strong(row_label)),
+    column(2, numericInput(paste0(id_prefix, "_old"),  "Old field",    values[1], min=0, max=1, step=0.05)),  # prob between 0 and 1
+    column(2, numericInput(paste0(id_prefix, "_new"),  "New field",    values[2], min=0, max=1, step=0.05)),
+    column(2, numericInput(paste0(id_prefix, "_remain"),"Remain",      values[3], min=0, max=1, step=0.05)),
+    column(2, numericInput(paste0(id_prefix, "_quit"), "Quit",         values[4], min=0, max=1, step=0.05)),
+    column(2, numericInput(paste0(id_prefix, "_size"), "Size",         values[5], min=0, step=1))  # size without max
+  )
+}
+
+
+ui <- fluidPage(
+  titlePanel("Job Choice Simulation"),
+  
+  fluidRow(
+    
+    # Smaller left sidebar
+    column(
+      width = 3,
+      wellPanel(
+        numericInput("new_positions", "New job positions in old field:", 200),
+        numericInput("old_positions", "Remaining old job positions:", 100),
+        numericInput("B", "Bootstrap reps:", 50),  # The number of bootstrap runs can be adjusted.
+        br(),
+        actionButton("run", "Run Simulation")
+      )
+    ),
+    
+    # Wide main area
+    column(
+      width = 9,
+      
+      h4("Edit group probabilities:"),   # Input probabilities.
+      make_prob_row("g1", "Group 1", c(0.5, 0.2, 0.1, 0.2, 100)),
+      make_prob_row("g2", "Group 2", c(0.2, 0.2, 0.4, 0.2, 200)),
+      make_prob_row("g3", "Group 3", c(0.1, 0.2, 0.2, 0.5, 25)),
+      make_prob_row("g4", "Group 4", c(0.4, 0.4, 0.2, 0.0, 75)),
+      
+      htmlOutput("warning_msg"),
+      
+      hr(),
+      h3("Simulation summary"),
+      tableOutput("summary"),    # Summary output.
+      
+      hr(),
+      h3("Diagnostics"),
+      verbatimTextOutput("diag")   # Diagnostics output.
+    )
+  )
+)
+
+
+
+# ============================================================
+# SERVER
+# ============================================================
+
+server <- function(input, output, session) {
+  
+  # Collect table from numericInputs
+  collect_df <- reactive({
+    data.frame(
+      group = paste("Group", 1:4),
+      old_field_prob = c(input$g1_old, input$g2_old, input$g3_old, input$g4_old),
+      new_field_prob = c(input$g1_new, input$g2_new, input$g3_new, input$g4_new),
+      remain_prob    = c(input$g1_remain, input$g2_remain, input$g3_remain, input$g4_remain),
+      quit_prob      = c(input$g1_quit, input$g2_quit, input$g3_quit, input$g4_quit),
+      size           = c(input$g1_size, input$g2_size, input$g3_size, input$g4_size)
+    )
+  })
+  
+  # Row-sum validation warning
+  output$warning_msg <- renderUI({
+    df <- collect_df()
+    row_sums <- df$old_field_prob + df$new_field_prob + df$remain_prob + df$quit_prob
+    if (any(abs(row_sums - 1) > 1e-6)) {
+      HTML("<span style='color:red;font-weight:bold;'>Probabilities in every row must sum to 1.</span>")
+    } else ""
+  })
+  
+  sim_res <- reactiveVal(NULL)
+  diag_res <- reactiveVal(NULL)
+  
+  observeEvent(input$run, {   # cf. action button 'run simulation'
+    df <- collect_df()
+    row_sums <- df$old_field_prob + df$new_field_prob + df$remain_prob + df$quit_prob
+    if (any(abs(row_sums - 1) > 1e-6)) {
+      showNotification("Fix probability rows before running!", type="error")   # Again check that probabilites sum to 1 upon run.
+      return()
+    }
+    
+    sim_df <- data.frame(
+      choice_change_to_new_job_position_in_old_field = df$old_field_prob,
+      choice_change_to_new_job_position_in_new_field = df$new_field_prob,
+      choice_remain_in_old_job_position              = df$remain_prob,
+      choice_quit_job                                = df$quit_prob,
+      group_size                                     = df$size
+    )
+    
+    progress <- Progress$new(session, min=0, max=input$B)   # Progess bar that monitors the bootstrap runs.
+    progress$set(message="Running simulation...")
+    on.exit(progress$close(), add=TRUE)
+    
+    out <- run_bootstrap(sim_df, input$new_positions, input$old_positions, input$B, progress)
+    
+    sim_res(out$summary)
+    diag_res(out$messages)
+  })
+  
+  output$summary <- renderTable(sim_res())   # Output summary.
+  
+  output$diag <- renderText({     # Output diagnostics.
+    d <- diag_res()
+    if (is.null(d)) return("No simulation yet.")
+    
+    paste0(
+      "Remain in old job, shortage after re-sampling: ", d$shortage, "\n",
+      "REmain in old job, reassigned to attain full coverage: ", d$step1, "\n",
+      "Reassigned due to remain limit: ", d$step2, "\n",
+      "Reassigned due to old-field limit: ", d$step3, "\n"
+    )
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
+
+
+

@@ -19,5 +19,17 @@
   },
   "posts/period_aggregation/period_aggregation.qmd": {
     "period_aggregation.html": "8a706bbf"
+  },
+  "posts/model_choices_in_new_job_situation/2025_Model_choices_in_new_job_situation.qmd": {
+    "2025_Model_choices_in_new_job_situation.html": "d017feb7"
+  },
+  "apps/model_choices_in_new_job_situation/2025_Model_choices_in_new_job_situation.qmd": {
+    "2025_Model_choices_in_new_job_situation.html": "427ea2c7"
+  },
+  "docs/about.qmd": {
+    "about.html": "009c570d"
+  },
+  "docs/index.qmd": {
+    "index.html": "8fdecee6"
   }
 }
