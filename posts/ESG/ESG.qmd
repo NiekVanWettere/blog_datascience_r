@@ -15,10 +15,6 @@ format:
 editor: source
 ---
 
-<br />
-
-# Introduction
-
 This blog post is about automated evaluation of companies listed in an ESG-screened ETF. We focus on the ETF 'Xtrackers MSCI World ESG UCITS'. For each company in the ETF, we try to gather news and classify the news according to its negative ESG-value.
 
 Most of the analysis is done in Python, because Python offers more readily available tools for this type of analysis.

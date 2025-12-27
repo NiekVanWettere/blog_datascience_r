@@ -25,7 +25,7 @@
     "href": "index.html",
     "title": "Blog about data science in R",
     "section": "",
-    "text": "Selection of explanatory variables for yearly trend\n\n\n\ntrend analysis\n\n\n\n\n\n\n\n\n\nJan 15, 2026\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nAutomated evaluation of companies in ESG-screened ETF\n\n\n\nAI\n\n\n\n\n\n\n\n\n\nDec 27, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nJob choice simulation with r-shinylive\n\n\n\napp\n\n\n\n\n\n\n\n\n\nDec 14, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nAggregating overlapping time periods\n\n\n\ndata wrangling\n\n\n\n\n\n\n\n\n\nNov 19, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nHistogram with median, interquartile range and outlier highlighting\n\n\n\nvisualization\n\n\n\n\n\n\n\n\n\nNov 2, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\nNo matching items"
+    "text": "Automated evaluation of companies in ESG-screened ETF\n\n\n\nAI\n\n\n\n\n\n\n\n\n\nDec 27, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nJob choice simulation with r-shinylive\n\n\n\napp\n\n\n\n\n\n\n\n\n\nDec 14, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nAggregating overlapping time periods\n\n\n\ndata wrangling\n\n\n\n\n\n\n\n\n\nNov 19, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\n\n\n\n\n\n\n\nHistogram with median, interquartile range and outlier highlighting\n\n\n\nvisualization\n\n\n\n\n\n\n\n\n\nNov 2, 2025\n\n\nNiek Van Wettere\n\n\n\n\n\nNo matching items"
   },
   {
     "objectID": "posts/model_choices_in_new_job_situation/2025_Model_choices_in_new_job_situation.html",
@@ -38,15 +38,15 @@
     "objectID": "posts/ESG/ESG.html#create-virtual-environment",
     "href": "posts/ESG/ESG.html#create-virtual-environment",
     "title": "Automated evaluation of companies in ESG-screened ETF",
-    "section": "2.1 Create virtual environment",
-    "text": "2.1 Create virtual environment\nFirst, we have to set up a virtual environment with the necessary packages.\n\nreticulate::virtualenv_create(\n  envname = \"esg-py\",\n  packages = c(\"pandas\", \"requests\", \"lxml\")\n)\n\n\nAdditionally, we create a requirements.txt file.\n\n# requirements.txt\npython &lt;- reticulate::py_config()$python\nsystem(sprintf('\"%s\" -m pip freeze &gt; requirements.txt', python))\n\n\nExtra packages can be installed into the virtual environment via the command below.\n\n# install extra packages\nreticulate::py_install(\"matplotlib\", envname = \"esg-py\")"
+    "section": "1.1 Create virtual environment",
+    "text": "1.1 Create virtual environment\nFirst, we have to set up a virtual environment with the necessary packages.\n\nreticulate::virtualenv_create(\n  envname = \"esg-py\",\n  packages = c(\"pandas\", \"requests\", \"lxml\")\n)\n\n\nAdditionally, we create a requirements.txt file.\n\n# requirements.txt\npython &lt;- reticulate::py_config()$python\nsystem(sprintf('\"%s\" -m pip freeze &gt; requirements.txt', python))\n\n\nExtra packages can be installed into the virtual environment via the command below.\n\n# install extra packages\nreticulate::py_install(\"matplotlib\", envname = \"esg-py\")"
   },
   {
     "objectID": "posts/ESG/ESG.html#activate-virtual-environment",
     "href": "posts/ESG/ESG.html#activate-virtual-environment",
     "title": "Automated evaluation of companies in ESG-screened ETF",
-    "section": "2.2 Activate virtual environment",
-    "text": "2.2 Activate virtual environment\nOnce the virtual environment is created, we have to activate it so that the installed packages are available for further analysis of the data.\n\nlibrary(reticulate)\nreticulate::use_virtualenv(\"esg-py\", required = TRUE)"
+    "section": "1.2 Activate virtual environment",
+    "text": "1.2 Activate virtual environment\nOnce the virtual environment is created, we have to activate it so that the installed packages are available for further analysis of the data.\n\nlibrary(reticulate)\nreticulate::use_virtualenv(\"esg-py\", required = TRUE)"
   },
   {
     "objectID": "posts/trend_explanatory_variables/trend_explanatory_variables.html#function-to-calculate-percentage-differences-between-consecutive-years",
@@ -89,5 +89,12 @@
     "title": "Selection of explanatory variables for yearly trend",
     "section": "4.3 Visualization",
     "text": "4.3 Visualization\n\nlibrary(ggplot2)\n# Step 1: Compute aggregated counts by Year and Region\ndt_region &lt;- dt[, .(agg_count = sum(Count)), by = .(Year, Region)]\n\ndt_region &lt;- calculate_percentage_differences(dt_region, count_var = \"agg_count\", \n                                              year_var = \"Year\", grouping_var = c(\"Region\"))\n\n# Step 3: Plot percentage changes\n# Exclude the first year (where perc_diff is NA)\ndt_region_filtered &lt;- dt_region[Year != min(Year)]\n\n# Then you can plot\nggplot(dt_region_filtered, aes(x = Year, y = perc_diff, color = Region)) +\n  geom_line(linewidth = 1.2) +\n  geom_point(size = 2) +\n  labs(title = \"Year-to-Year Percentage Changes by Region\",\n       y = \"Percentage Change (%)\",\n       x = \"Year\") +\n  theme_minimal()"
+  },
+  {
+    "objectID": "posts/ESG/ESG.html",
+    "href": "posts/ESG/ESG.html",
+    "title": "Automated evaluation of companies in ESG-screened ETF",
+    "section": "",
+    "text": "This blog post is about automated evaluation of companies listed in an ESG-screened ETF. We focus on the ETF ‘Xtrackers MSCI World ESG UCITS’. For each company in the ETF, we try to gather news and classify the news according to its negative ESG-value.\nMost of the analysis is done in Python, because Python offers more readily available tools for this type of analysis."
   }
 ]

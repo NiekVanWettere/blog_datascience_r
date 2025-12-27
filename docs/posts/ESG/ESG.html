@@ -5195,15 +5195,14 @@ window.onload = function() {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#introduction" id="toc-introduction" class="nav-link active" data-scroll-target="#introduction"><span class="header-section-number">1</span> Introduction</a></li>
-  <li><a href="#virtual-environment" id="toc-virtual-environment" class="nav-link" data-scroll-target="#virtual-environment"><span class="header-section-number">2</span> Virtual environment</a>
+  <li><a href="#virtual-environment" id="toc-virtual-environment" class="nav-link active" data-scroll-target="#virtual-environment"><span class="header-section-number">1</span> Virtual environment</a>
   <ul class="collapse">
-  <li><a href="#create-virtual-environment" id="toc-create-virtual-environment" class="nav-link" data-scroll-target="#create-virtual-environment"><span class="header-section-number">2.1</span> Create virtual environment</a></li>
-  <li><a href="#activate-virtual-environment" id="toc-activate-virtual-environment" class="nav-link" data-scroll-target="#activate-virtual-environment"><span class="header-section-number">2.2</span> Activate virtual environment</a></li>
+  <li><a href="#create-virtual-environment" id="toc-create-virtual-environment" class="nav-link" data-scroll-target="#create-virtual-environment"><span class="header-section-number">1.1</span> Create virtual environment</a></li>
+  <li><a href="#activate-virtual-environment" id="toc-activate-virtual-environment" class="nav-link" data-scroll-target="#activate-virtual-environment"><span class="header-section-number">1.2</span> Activate virtual environment</a></li>
   </ul></li>
-  <li><a href="#retrieve-list-of-holdings" id="toc-retrieve-list-of-holdings" class="nav-link" data-scroll-target="#retrieve-list-of-holdings"><span class="header-section-number">3</span> Retrieve list of holdings</a></li>
-  <li><a href="#retrieve-news" id="toc-retrieve-news" class="nav-link" data-scroll-target="#retrieve-news"><span class="header-section-number">4</span> Retrieve news</a></li>
-  <li><a href="#ai-analysis" id="toc-ai-analysis" class="nav-link" data-scroll-target="#ai-analysis"><span class="header-section-number">5</span> AI-analysis</a></li>
+  <li><a href="#retrieve-list-of-holdings" id="toc-retrieve-list-of-holdings" class="nav-link" data-scroll-target="#retrieve-list-of-holdings"><span class="header-section-number">2</span> Retrieve list of holdings</a></li>
+  <li><a href="#retrieve-news" id="toc-retrieve-news" class="nav-link" data-scroll-target="#retrieve-news"><span class="header-section-number">3</span> Retrieve news</a></li>
+  <li><a href="#ai-analysis" id="toc-ai-analysis" class="nav-link" data-scroll-target="#ai-analysis"><span class="header-section-number">4</span> AI-analysis</a></li>
   </ul>
 </nav>
     </div>
@@ -5214,16 +5213,12 @@ window.onload = function() {
 
 
 
-<p><br></p>
-<section id="introduction" class="level1" data-number="1">
-<h1 data-number="1"><span class="header-section-number">1</span> Introduction</h1>
 <p>This blog post is about automated evaluation of companies listed in an ESG-screened ETF. We focus on the ETF ‘Xtrackers MSCI World ESG UCITS’. For each company in the ETF, we try to gather news and classify the news according to its negative ESG-value.</p>
 <p>Most of the analysis is done in Python, because Python offers more readily available tools for this type of analysis. <br></p>
-</section>
-<section id="virtual-environment" class="level1" data-number="2">
-<h1 data-number="2"><span class="header-section-number">2</span> Virtual environment</h1>
-<section id="create-virtual-environment" class="level2" data-number="2.1">
-<h2 data-number="2.1" class="anchored" data-anchor-id="create-virtual-environment"><span class="header-section-number">2.1</span> Create virtual environment</h2>
+<section id="virtual-environment" class="level1" data-number="1">
+<h1 data-number="1"><span class="header-section-number">1</span> Virtual environment</h1>
+<section id="create-virtual-environment" class="level2" data-number="1.1">
+<h2 data-number="1.1" class="anchored" data-anchor-id="create-virtual-environment"><span class="header-section-number">1.1</span> Create virtual environment</h2>
 <p>First, we have to set up a virtual environment with the necessary packages.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a>reticulate<span class="sc">::</span><span class="fu">virtualenv_create</span>(</span>
@@ -5246,8 +5241,8 @@ window.onload = function() {
 </div>
 <p><br></p>
 </section>
-<section id="activate-virtual-environment" class="level2" data-number="2.2">
-<h2 data-number="2.2" class="anchored" data-anchor-id="activate-virtual-environment"><span class="header-section-number">2.2</span> Activate virtual environment</h2>
+<section id="activate-virtual-environment" class="level2" data-number="1.2">
+<h2 data-number="1.2" class="anchored" data-anchor-id="activate-virtual-environment"><span class="header-section-number">1.2</span> Activate virtual environment</h2>
 <p>Once the virtual environment is created, we have to activate it so that the installed packages are available for further analysis of the data.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(reticulate)</span>
@@ -5256,8 +5251,8 @@ window.onload = function() {
 <p><br></p>
 </section>
 </section>
-<section id="retrieve-list-of-holdings" class="level1" data-number="3">
-<h1 data-number="3"><span class="header-section-number">3</span> Retrieve list of holdings</h1>
+<section id="retrieve-list-of-holdings" class="level1" data-number="2">
+<h1 data-number="2"><span class="header-section-number">2</span> Retrieve list of holdings</h1>
 <p>We scrape the companies that make up the ETF from the web.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> requests</span>
@@ -5292,8 +5287,8 @@ window.onload = function() {
 </div>
 <p><br></p>
 </section>
-<section id="retrieve-news" class="level1" data-number="4">
-<h1 data-number="4"><span class="header-section-number">4</span> Retrieve news</h1>
+<section id="retrieve-news" class="level1" data-number="3">
+<h1 data-number="3"><span class="header-section-number">3</span> Retrieve news</h1>
 <p>We start with defining two functions that ‘clean’ the company names and build a keyword for search.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a></span>
@@ -5447,8 +5442,8 @@ window.onload = function() {
 </div>
 <p><br></p>
 </section>
-<section id="ai-analysis" class="level1" data-number="5">
-<h1 data-number="5"><span class="header-section-number">5</span> AI-analysis</h1>
+<section id="ai-analysis" class="level1" data-number="4">
+<h1 data-number="4"><span class="header-section-number">4</span> AI-analysis</h1>
 <p>By means of a Transformer-model, we aim to classify the news titles on their ESG-value.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb14"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a></span>
