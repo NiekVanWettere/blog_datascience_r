@@ -31,5 +31,11 @@
   },
   "docs/index.qmd": {
     "index.html": "8fdecee6"
+  },
+  "posts/ESG/ESG.qmd": {
+    "ESG.html": "6be282f2"
+  },
+  "posts/trend_explanatory_variables/trend_explanatory_variables.qmd": {
+    "trend_explanatory_variables.html": "b0cecfce"
   }
 }

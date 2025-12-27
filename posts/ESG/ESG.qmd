@@ -1,0 +1,523 @@
+---
+title: "Automated evaluation of companies in ESG-screened ETF"
+author: "Niek Van Wettere"
+date: "2025-12-27"
+categories: [AI]
+image: etf_ai_image.JPG
+format: 
+  html:
+    self-contained: true
+    toc: true
+    number-sections: true
+    code-fold: false
+    code-overflow: wrap
+    df-print: paged
+editor: source
+---
+
+<br />
+
+# Introduction
+
+This blog post is about automated evaluation of companies listed in an ESG-screened ETF. We focus on the ETF 'Xtrackers MSCI World ESG UCITS'. For each company in the ETF, we try to gather news and classify the news according to its negative ESG-value.
+
+Most of the analysis is done in Python, because Python offers more readily available tools for this type of analysis.
+<br />
+
+# Virtual environment
+
+## Create virtual environment
+
+First, we have to set up a virtual environment with the necessary packages.
+
+```{r, eval = F}
+
+reticulate::virtualenv_create(
+  envname = "esg-py",
+  packages = c("pandas", "requests", "lxml")
+)
+
+```
+
+<br />
+
+Additionally, we create a requirements.txt file.
+
+```{r, eval = F}
+
+# requirements.txt
+python <- reticulate::py_config()$python
+system(sprintf('"%s" -m pip freeze > requirements.txt', python))
+
+```
+
+<br />
+
+Extra packages can be installed into the virtual environment via the command below.
+
+```{r, eval = F}
+
+# install extra packages
+reticulate::py_install("matplotlib", envname = "esg-py")
+
+```
+
+<br />
+
+## Activate virtual environment
+
+Once the virtual environment is created, we have to activate it so that the installed packages are available for further analysis of the data.
+
+```{r}
+
+library(reticulate)
+reticulate::use_virtualenv("esg-py", required = TRUE)
+
+```
+
+<br />
+
+# Retrieve list of holdings
+
+We scrape the companies that make up the ETF from the web.
+
+```{python, message = F, eval = F}
+
+import requests
+import pandas as pd
+from io import StringIO  
+
+url = "https://companiesmarketcap.com/xtrackers-msci-world-esg-ucits-etf-1c/holdings/"
+
+# Fetch the HTML
+response = requests.get(url)
+response.raise_for_status()
+html_text = response.text
+
+# Wrap HTML in StringIO
+tables = pd.read_html(StringIO(html_text))
+
+# Extract the first table
+df_holdings = tables[0]
+
+# Optional: clean column names
+df_holdings.columns = ["Weight", "Name", "ISIN", "Country"]
+
+# Save to CSV
+df_holdings.to_csv("xzw0_full_holdings.csv", index=False)
+
+```
+
+<br />
+
+Now that the list of holdings is available in a csv-file, we can load it from there for further analysis.
+
+```{python}
+
+import pandas as pd
+data_holdings = pd.read_table('xzw0_full_holdings.csv', delimiter=',')
+
+```
+
+
+<br />
+
+# Retrieve news
+
+We start with defining two functions that 'clean' the company names and build a keyword for search.
+
+```{python}
+
+import re
+
+def clean_company_name(name):
+    # Uppercase for consistency
+    name = name.upper()
+
+    # Remove common legal suffixes
+    suffixes = [
+        r'\bINC\b', r'\bCORP\b', r'\bCORPORATION\b',
+        r'\bGROUP\b', r'\bGROEP\b',
+        r'\bNV\b', r'\bAG\b',
+        r'\bLTD\b', r'\bLIMITED\b', r'\bCO\b',
+        r'\bCLASS A\b', r'\bCLASS B\b', r'\bPLC\b'
+    ]
+
+    for s in suffixes:
+        name = re.sub(s, '', name)
+
+    
+    # Replace & with space
+    name = name.replace('&', ' ')
+
+    # Remove extra whitespace
+    name = re.sub(r'\s+', ' ', name).strip()
+
+    return name
+
+```
+
+<br />
+
+```{python}
+
+def build_keyword(name):
+    cleaned = clean_company_name(name)
+
+    # If very short, expand it
+    if len(cleaned) <= 4:
+        return f'"{cleaned} company"'
+
+    # Quote multi-word company names
+    if ' ' in cleaned:
+        return f'"{cleaned}"'
+
+    return cleaned
+
+```
+
+<br />
+
+Consequently, we use the API of the GDELT-project to retrieve news titles concerning the companies. We limit the search to certain ESG-themes. These data are very limited (only titles) and it's not possible to reliably link them to a specific company. Therefore, we have to be cautious interpreting the data. A major advantage is that the data are openly available, without cost.
+
+
+```{python, eval = F}
+
+from gdeltdoc import GdeltDoc, Filters
+import pandas as pd
+import time
+
+gd = GdeltDoc()
+results = []
+
+ESG_THEMES = [  # http://data.gdeltproject.org/api/v2/guides/LOOKUP-GKGTHEMES.TXT
+    "WB_1786_ENVIRONMENTAL_SUSTAINABILITY",
+    "WB_2089_ETHICS_AND_CODES_OF_CONDUCT",
+    "WB_417_CORPORATE_GOVERNANCE",
+    "WB_2507_HUMAN_RIGHTS_ABUSES_AND_VIOLATIONS"
+]
+
+TRUSTED_DOMAINS = [
+    "reuters.com",
+    "bloomberg.com",
+    "ft.com",
+    "wsj.com",
+    "nytimes.com",
+    "theguardian.com",
+    "economist.com"
+]
+
+for _, row in data_holdings.iterrows():
+    keyword = build_keyword(row["Name"])
+
+    for theme in ESG_THEMES:
+        try:
+            f = Filters(
+                keyword=keyword,
+                language="English",
+                theme=theme,  
+               #domain=TRUSTED_DOMAINS,
+                start_date="2023-01-01",
+                end_date="2025-12-26"
+            )
+
+            articles = gd.article_search(f)
+
+            if articles is None or len(articles) == 0:
+                continue
+
+            gkg = pd.DataFrame(articles)
+
+            # Add metadata
+            gkg["ISIN"] = row["ISIN"]
+            gkg["Name"] = row["Name"]
+            gkg["Theme"] = theme  
+
+            results.append(gkg)
+
+            time.sleep(0.5)  # avoid throttling
+
+        except Exception as e:
+            print(f"Error for {row['Name']} | Theme {theme}: {e}")
+
+# Combine all results
+news_df_original = pd.concat(results, ignore_index=True) if results else pd.DataFrame()
+
+
+
+```
+
+The results are saved to a csv-file.
+
+```{python, eval = F}
+
+# Save to CSV
+news_df_original.to_csv("news_df_original.csv", index=False)
+
+```
+
+<br />
+
+We clean the results further, removing for example news title duplicates.
+
+```{python, eval = F}
+
+# Delete rows with no title.
+news_df = news_df_original.dropna(subset=["title"])
+news_df = news_df[news_df["title"].str.strip() != ""]
+
+
+# The (first part of the) company name must be in the title of the article.
+import re
+
+def name_in_title(row):
+    if pd.isna(row["title"]) or pd.isna(row["Name"]):
+        return False
+    # Use first token to avoid regex length issues
+    token = row["Name"].split()[0]
+    return re.search(rf"\b{re.escape(token)}\b", row["title"], re.IGNORECASE) is not None
+
+news_df = news_df[news_df.apply(name_in_title, axis=1)]
+
+
+# Maximally remove identical titles.
+news_df = news_df.drop_duplicates(subset="title", keep="first")
+
+```
+
+<br />
+
+The results are saved to a csv-file.
+
+```{python, eval = F}
+
+# Save to CSV
+news_df.to_csv("news_df.csv", index=False)
+
+```
+
+<br />
+
+If we continue the analysis at a later moment, we can now load the data from the csv-file.
+
+```{python}
+
+import pandas as pd
+news_df = pd.read_table('news_df.csv', delimiter=',')
+
+```
+
+<br />
+
+# AI-analysis
+
+By means of a Transformer-model, we aim to classify the news titles on their ESG-value.
+
+```{python}
+
+from transformers import pipeline
+import pandas as pd
+
+nli = pipeline(
+    "zero-shot-classification",
+    model="facebook/bart-large-mnli",
+    device=-1  # CPU
+)
+
+
+```
+
+<br />
+
+We use two functions, one to capture the sentiment about the company and one to ascertain whether the news title has negative or positive ESG-value.
+
+
+```{python}
+
+def targeted_company_sentiment(title: str, company: str):
+    """
+    Returns: sentiment_label, confidence_score
+    """
+
+    candidate_labels = ["negative", "positive", "neutral"]
+
+    hypothesis_template = "This article expresses {} sentiment about " + company + "."
+
+    result = nli(
+        title,
+        candidate_labels,
+        hypothesis_template=hypothesis_template,
+        truncation=True
+    )
+
+    sentiment = result["labels"][0]
+    confidence = result["scores"][0]
+
+    return sentiment, confidence
+
+
+
+```
+
+
+<br />
+
+```{python}
+
+ESG_LABELS = [
+    "negative ESG impact",
+    "positive ESG impact",
+    "not ESG related"
+]
+
+def esg_relevance_and_polarity(title: str):
+    """
+    Returns: esg_label, confidence_score
+    """
+    result = nli(
+        title,
+        ESG_LABELS,
+        truncation=True
+    )
+
+    return result["labels"][0], result["scores"][0]
+
+
+```
+
+<br />
+
+Both inputs are used to establish a final evaluation.
+
+```{python}
+
+def classify_esg_title(
+    title: str,
+    company: str,
+    sentiment_threshold=0.8,
+    esg_threshold=0.8
+):
+    """
+    Convergent ESG classifier
+    Returns: label, confidence
+    """
+
+    sentiment, sent_conf = targeted_company_sentiment(title, company)
+    esg_label, esg_conf = esg_relevance_and_polarity(title)
+
+    # Normalize ESG polarity
+    esg_polarity = {
+        "negative ESG impact": "negative",
+        "positive ESG impact": "positive",
+        "not ESG related": "neutral"
+    }[esg_label]
+
+    # Weak confidence for at least one of the two thresholds → neutral
+    if sent_conf < sentiment_threshold or esg_conf < esg_threshold:
+        return "neutral", None
+
+    # Both strong
+    if sentiment == esg_polarity:
+        return f"{sentiment} ESG", (sent_conf + esg_conf) / 2
+
+    # Remaining is neutral.
+    return "neutral", None
+
+
+```
+
+<br />
+
+The labeling is performed for each row of the dataset.
+
+```{python}
+
+def classify_dataframe(df: pd.DataFrame):
+    
+    df = df.copy()
+    
+    labels = []
+    confidences = []
+
+    for _, row in df.iterrows():
+        label, conf = classify_esg_title(
+            title=row["title"],
+            company=row["Name"]
+        )
+        labels.append(label)
+        confidences.append(conf)
+
+    df["ESG_Label"] = labels
+    df["ESG_Confidence"] = confidences
+
+    return df
+
+
+```
+
+<br />
+
+All the necessary functions are defined, now we can apply them to the dataframe with news titles.
+
+```{python, eval = F}
+
+news_df = classify_dataframe(news_df)
+
+```
+
+<br />
+
+The results are saved to a csv-file.
+
+```{python, eval = F}
+
+# Save to CSV
+news_df.to_csv("news_df_with_esg.csv", index=False)
+
+```
+
+<br />
+
+If we continue the analysis at a later moment, we can now load the data from the csv-file.
+
+```{python}
+
+import pandas as pd
+news_df = pd.read_table('news_df_with_esg.csv', delimiter=',')
+
+```
+
+<br />
+
+
+Finally, we cite the titles that were identified as 'negative ESG', at least according to our model. Several results appear to be unreliable. For example, company names that are too close to 'regular' words (such as empire, waters) cause issues.
+
+```{python}
+
+import pandas as pd
+
+# Filter only negative ESG labels
+neg_df = news_df[news_df["ESG_Label"] == "negative ESG"]
+neg_df_table = neg_df[["title", "Name"]]
+
+```
+
+<br />
+
+```{python results="asis"}
+
+pd.set_option("display.max_colwidth", None)
+neg_df_table.to_html(
+    index=False,
+    classes="table table-striped"
+)
+
+```
+
+
+<br />
+
+
+
+
+
