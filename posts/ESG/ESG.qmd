@@ -1,7 +1,7 @@
 ---
 title: "Automated evaluation of companies in ESG-screened ETF"
 author: "Niek Van Wettere"
-date: "2025-12-27"
+date: "2025-12-28"
 categories: [AI]
 image: etf_ai_image.jpg
 format: 
