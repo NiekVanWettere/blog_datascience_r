@@ -39,7 +39,7 @@
     "href": "posts/ESG/ESG.html#create-virtual-environment",
     "title": "Automated evaluation of companies in ESG-screened ETF",
     "section": "1.1 Create virtual environment",
-    "text": "1.1 Create virtual environment\nFirst, we have to set up a virtual environment with the necessary packages.\n\nreticulate::virtualenv_create(\n  envname = \"esg-py\",\n  packages = c(\"pandas\", \"requests\", \"lxml\")\n)\n\n\nAdditionally, we create a requirements.txt file.\n\n# requirements.txt\npython &lt;- reticulate::py_config()$python\nsystem(sprintf('\"%s\" -m pip freeze &gt; requirements.txt', python))\n\n\nExtra packages can be installed into the virtual environment via the command below.\n\n# install extra packages\nreticulate::py_install(\"matplotlib\", envname = \"esg-py\")"
+    "text": "1.1 Create virtual environment\nFirst, we have to set up a virtual environment with the necessary packages.\n\nreticulate::virtualenv_create(\n  envname = \"esg-py\",\n  packages = c(\"pandas\", \"requests\", \"lxml\")\n)\n\n\nAdditionally, we create a requirements.txt file.\n\n# requirements.txt\npython &lt;- reticulate::py_config()$python\nsystem(sprintf('\"%s\" -m pip freeze &gt; requirements.txt', python))\n\n\nExtra packages can be installed into the virtual environment via the command below.\n\n# install extra packages\nreticulate::py_install(\"nltk\", envname = \"esg-py\")"
   },
   {
     "objectID": "posts/ESG/ESG.html#activate-virtual-environment",

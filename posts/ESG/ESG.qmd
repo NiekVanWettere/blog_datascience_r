@@ -3,7 +3,7 @@ title: "Automated evaluation of companies in ESG-screened ETF"
 author: "Niek Van Wettere"
 date: "2025-12-27"
 categories: [AI]
-image: etf_ai_image.JPG
+image: etf_ai_image.jpg
 format: 
   html:
     self-contained: true
@@ -54,7 +54,7 @@ Extra packages can be installed into the virtual environment via the command bel
 ```{r, eval = F}
 
 # install extra packages
-reticulate::py_install("matplotlib", envname = "esg-py")
+reticulate::py_install("nltk", envname = "esg-py")
 
 ```
 
@@ -120,7 +120,7 @@ data_holdings = pd.read_table('xzw0_full_holdings.csv', delimiter=',')
 
 # Retrieve news
 
-We start with defining two functions that 'clean' the company names and build a keyword for search.
+We start with defining two functions that 'clean' the company names and build a keyword for search. A possible improvement is to use all known name variants of the same ISIN-number.
 
 ```{python}
 
@@ -155,14 +155,40 @@ def clean_company_name(name):
 
 <br />
 
+
+```{python}
+
+from nltk.corpus import wordnet as wn
+from wordfreq import zipf_frequency
+
+def is_common_english_word(word, threshold=3.5):
+    """
+    Zipf frequency:
+    ~1–2  rare
+    ~3    uncommon
+    ~4–5  common
+    ~6–7  very common
+    """
+    
+    is_lexical_word = bool(wn.synsets(word.lower()))  # Proper nouns should be excluded this way. This would also exclude multiword expressions.
+    is_common_usage = zipf_frequency(word.lower(), "en") >= threshold
+
+    is_common_word = is_lexical_word and is_common_usage
+    
+    return is_common_word
+
+```
+
+<br />
+
 ```{python}
 
 def build_keyword(name):
     cleaned = clean_company_name(name)
 
-    # If very short, expand it
-    if len(cleaned) <= 4:
-        return f'"{cleaned} company"'
+    # If very short or common English word, expand the query with "company"
+    if (len(cleaned) <= 4) or (is_common_english_word(cleaned)):
+        return f'"{cleaned}" AND "company"'
 
     # Quote multi-word company names
     if ' ' in cleaned:
@@ -174,7 +200,18 @@ def build_keyword(name):
 
 <br />
 
-Consequently, we use the API of the GDELT-project to retrieve news titles concerning the companies. We limit the search to certain ESG-themes. These data are very limited (only titles) and it's not possible to reliably link them to a specific company. Therefore, we have to be cautious interpreting the data. A major advantage is that the data are openly available, without cost.
+Common English words are accompanied by 'company' in the search term, cf. example below.
+
+```{python}
+
+build_keyword("MICROSOFT CORP")
+build_keyword("EMPIRE CORP")
+
+```
+
+<br />
+
+Consequently, we use the API of the GDELT-project to retrieve news titles concerning the companies. We limit the search to certain ESG-themes. These data are very limited (only titles) and it's not possible to reliably link them to a specific company. Therefore, we have to be cautious interpreting the data. Moreover, the number of hits is also restricted per call. A more comprehensive approach would be to download the complete GDELT-files, but this is beyond the scope of the current demonstration. A major advantage is that the data are openly available, without cost.
 
 
 ```{python, eval = F}
@@ -337,7 +374,7 @@ def targeted_company_sentiment(title: str, company: str):
 
     candidate_labels = ["negative", "positive", "neutral"]
 
-    hypothesis_template = "This article expresses {} sentiment about " + company + "."
+    hypothesis_template = "The article is about the company " + company + " and expresses {} sentiment toward it."
 
     result = nli(
         title,
@@ -486,7 +523,7 @@ news_df = pd.read_table('news_df_with_esg.csv', delimiter=',')
 <br />
 
 
-Finally, we cite the titles that were identified as 'negative ESG', at least according to our model. Several results appear to be unreliable. For example, company names that are too close to 'regular' words (such as empire, waters) cause issues.
+Finally, we cite the titles that were identified as 'negative ESG', at least according to our model. Several results appear to be unreliable. For example, company names that are too close to 'regular' words (such as 'Pandora box') cause issues.
 
 ```{python}
 
@@ -503,10 +540,19 @@ neg_df_table = neg_df[["title", "Name"]]
 ```{python results="asis"}
 
 pd.set_option("display.max_colwidth", None)
-neg_df_table.to_html(
+
+html_table = neg_df_table.to_html(
     index=False,
     classes="table table-striped"
 )
+
+scrollable_html = f"""
+<div style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd;">
+    {html_table}
+</div>
+"""
+
+scrollable_html
 
 ```
 
