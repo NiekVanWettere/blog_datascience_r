@@ -1,6 +1,10 @@
 project:
   type: website
   output-dir: docs
+  resources:
+    - "**/*.png"
+    - "**/*.jpg"
+    - "**/*.jpeg"
 
 website:
   description: "Personal website of Niek Van Wettere — linguist and data scientist."
