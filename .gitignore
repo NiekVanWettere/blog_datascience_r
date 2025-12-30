@@ -5,6 +5,7 @@
 .Rhistory
 .RData
 .Ruserdata
+.Rprofile
 
 # Quarto cache and output
 _render/
